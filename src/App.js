@@ -71,7 +71,7 @@ function App() {
 
         setLoading(true);
 
-        fetch('http://scarveserver-production.up.railway.app/seamcarve', {
+        fetch('https://scarveserver-production.up.railway.app/seamcarve', {
             method: 'POST',
             body: formData
         })
