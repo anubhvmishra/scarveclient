@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Seam Carving</title>
+</head>
+
+<body onload="resetPage()">
+    <input type="file" id="imageInput" onchange="showOriginalImage()">
+    <br>
+    <img id="originalImage" src="" alt="Original Image" style="display:none;">
+    <br>
+    <span id="originalSize"></span>
+    <br>
+    <label for="newWidth">New Width:</label>
+    <input type="number" id="newWidth" oninput="validateInput()">
+    <br>
+    <label for="newHeight">New Height:</label>
+    <input type="number" id="newHeight" oninput="validateInput()">
+    <br>
+    <span id="errorMessage" style="color: red; display: none;"></span>
+    <br>
+    <button onclick="uploadImage()">Upload</button>
+    <br>
+    <div id="loadingBar" style="display: none;">Loading...</div>
+    <br>
+    <img id="resultImage" src="" alt="Result Image">
+    <br>
+    <a id="downloadLink" href="" download="seamcarved_image.png" style="display: none;">Download Image</a>
+
+    <script>
+        let originalWidth = 0;
+        let originalHeight = 0;
+
+        function resetPage() {
+            document.getElementById('imageInput').value = '';
+            document.getElementById('newWidth').value = '';
+            document.getElementById('newHeight').value = '';
+            document.getElementById('originalImage').style.display = 'none';
+            document.getElementById('originalSize').textContent = '';
+            document.getElementById('errorMessage').style.display = 'none';
+            document.getElementById('loadingBar').style.display = 'none';
+            document.getElementById('resultImage').src = '';
+            document.getElementById('downloadLink').style.display = 'none';
+        }
+
+        function showOriginalImage() {
+            const input = document.getElementById('imageInput');
+            const file = input.files[0];
+            const url = URL.createObjectURL(file);
+            const originalImage = document.getElementById('originalImage');
+            originalImage.src = url;
+            originalImage.style.display = 'block';
+
+            const img = new Image();
+            img.onload = function() {
+                originalWidth = img.width;
+                originalHeight = img.height;
+                document.getElementById('originalSize').textContent = 'Original Size: ' + originalWidth + ' x ' + originalHeight + ' px';
+                document.getElementById('newWidth').max = originalWidth;
+                document.getElementById('newHeight').max = originalHeight;
+            };
+            img.src = url;
+        }
+
+        function validateInput() {
+            const newWidth = document.getElementById('newWidth').value;
+            const newHeight = document.getElementById('newHeight').value;
+            const errorMessage = document.getElementById('errorMessage');
+            if (newWidth > originalWidth || newHeight > originalHeight) {
+                errorMessage.textContent = 'The new dimensions must be less than or equal to the original dimensions.';
+                errorMessage.style.display = 'block';
+                return false;
+            } else {
+                errorMessage.style.display = 'none';
+                return true;
+            }
+        }
+
+        function uploadImage() {
+            if (!validateInput()) {
+                return;
+            }
+
+            const input = document.getElementById('imageInput');
+            const file = input.files[0];
+            const newWidth = document.getElementById('newWidth').value;
+            const newHeight = document.getElementById('newHeight').value;
+            const n_of_cols_to_reduce = originalWidth - newWidth;
+            const n_of_rows_to_reduce = originalHeight - newHeight;
+            const formData = new FormData();
+            formData.append('image', file);
+            formData.append('n_of_cols_to_reduce', n_of_cols_to_reduce);
+            formData.append('n_of_rows_to_reduce', n_of_rows_to_reduce);
+
+            const loadingBar = document.getElementById('loadingBar');
+            loadingBar.style.display = 'block';
+
+            fetch('http://scarveserver-production.up.railway.app/seamcarve', {
+                method: 'POST',
+                body: formData
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok ' + response.statusText);
+                    }
+                    return response.blob();
+                })
+                .then(blob => {
+                    loadingBar.style.display = 'none';
+                    const url = URL.createObjectURL(blob);
+                    document.getElementById('resultImage').src = url;
+                    const downloadLink = document.getElementById('downloadLink');
+                    downloadLink.href = url;
+                    downloadLink.style.display = 'block';
+                })
+                .catch(error => {
+                    loadingBar.style.display = 'none';
+                    console.error('There has been a problem with your fetch operation:', error);
+                });
+        }
+    </script>
+</body>
+
+</html>
